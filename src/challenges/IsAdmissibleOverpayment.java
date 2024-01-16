@@ -1,5 +1,7 @@
 package challenges;
 
+import java.math.BigDecimal;
+
 /**
  * After recently joining Instacart's beta testing developer group, you decide to experiment with their new API. You know that
  * the API returns item-specific display-ready strings like 10.0% higher than in-store or 5.0% lower than in-store that inform
@@ -90,27 +92,29 @@ public class IsAdmissibleOverpayment {
         for(int i=0; i<prices.length; i++) {
             double price = prices[i];
             String note = notes[i];
-            double localPrice = getLocalPrice(note);
+            double localPrice = getLocalPrice(price, note);
             double diff = price - localPrice;
-            if(diff > 0) {
-                overpayment += diff;
-            }
+            overpayment += diff;
         }
+        // Need to round to 4 decimal places to solve the double precision issue
+        overpayment = new BigDecimal(overpayment).setScale(4, BigDecimal.ROUND_HALF_UP).doubleValue();
         return overpayment <= x;
     }
 
-    private static double getLocalPrice(String note) {
+    private static double getLocalPrice(double price, String note) {
         String[] tokens = note.split(" ");
         if(tokens[0].equals("Same")) {
-            return Double.parseDouble(tokens[2]);
-        } else {
-            double percent = Double.parseDouble(tokens[0].substring(0, tokens[0].length()-1));
-            double localPrice = Double.parseDouble(tokens[4]);
-            if(tokens[1].equals("higher")) {
-                return localPrice / (1 + percent/100);
-            } else {
-                return localPrice / (1 - percent/100);
+            return price;
+        }
+
+        if(tokens[0].contains("%")) {
+            double value = Double.parseDouble(tokens[0].replace("%", "")) / 100;
+            if (tokens[1].equals("higher")) {
+                return price / (1 + value);
+            } else if (tokens[1].equals("lower")) {
+                return price / (1 - value);
             }
         }
+        return 0;
     }
 }
